@@ -1,3 +1,9 @@
+
+import os
+
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("reports", exist_ok=True)
+
 from flask import Flask, render_template, request, redirect, url_for, send_file, session
 import pandas as pd
 import numpy as np
