@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Dataset Report | Analytics Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1a2c3e;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body.dark {
+            background: #0f1419;
+            color: #eef2f8;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: white;
+            border-radius: 3rem;
+            padding: 0.8rem 1.3rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            border: 1px solid rgba(108, 142, 158, 0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        body.dark .theme-toggle {
+            background: #1f2a34;
+            color: #eef2f8;
+            border-color: rgba(141, 170, 186, 0.3);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.5s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title-section h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2c3e50 0%, #6c8e9e 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        body.dark .title-section h1 {
+            background: linear-gradient(135deg, #eef2f8 0%, #8daaba 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
+        .title-section p {
+            color: #5a6e7c;
+            font-size: 0.9rem;
+        }
+
+        body.dark .title-section p {
+            color: #a9bed3;
+        }
+
+        .back-btn {
+            background: white;
+            padding: 0.7rem 1.5rem;
+            border-radius: 2rem;
+            text-decoration: none;
+            color: #4a627a;
+            font-weight: 500;
+            transition: all 0.3s;
+            border: 1px solid #e2edf2;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body.dark .back-btn {
+            background: #1f2a34;
+            color: #b8ccdf;
+            border-color: #2d3a44;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Premium Download Button */
+        .pdf-btn-container {
+            margin-bottom: 2rem;
+            text-align: center;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .btn-download-pdf {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 14px 36px;
+            border-radius: 50px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-download-pdf:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        .btn-download-pdf:active {
+            transform: translateY(1px);
+        }
+
+        .btn-download-pdf i {
+            font-size: 18px;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(4px);
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #667eea;
+            border-right: 4px solid #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-overlay p {
+            color: white;
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2edf2;
+        }
+
+        body.dark .stat-card {
+            background: #1f2a34;
+            border-color: #2d3a44;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #6c8e9e;
+            margin-bottom: 0.5rem;
+        }
+
+        body.dark .stat-value {
+            color: #8daaba;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: #5a6e7c;
+        }
+
+        body.dark .stat-label {
+            color: #a9bed3;
+        }
+
+        .health-score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            text-align: center;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .health-score-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .health-score-value {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .health-score-label {
+            font-size: 0.9rem;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .health-sub-scores {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sub-score {
+            text-align: center;
+        }
+
+        .sub-score-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .sub-score-label {
+            font-size: 0.7rem;
+            opacity: 0.85;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2edf2;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.5s ease;
+            animation-fill-mode: both;
+        }
+
+        body.dark .section-card {
+            background: #1f2a34;
+            border-color: #2d3a44;
+        }
+
+        .section-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #6c8e9e;
+            padding-left: 1rem;
+        }
+
+        body.dark .section-title {
+            border-left-color: #8daaba;
+        }
+
+        .section-title i {
+            color: #6c8e9e;
+            font-size: 1.3rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 0.75rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table thead {
+            background: #f8fafc;
+        }
+
+        body.dark .data-table thead {
+            background: #16222c;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 1rem 0.75rem;
+            font-weight: 600;
+            color: #4a627a;
+            border-bottom: 2px solid #e2edf2;
+        }
+
+        body.dark .data-table th {
+            color: #b8ccdf;
+            border-bottom-color: #2d3a44;
+        }
+
+        .data-table td {
+            padding: 0.85rem 0.75rem;
+            border-bottom: 1px solid #e2edf2;
+        }
+
+        body.dark .data-table td {
+            border-bottom-color: #2d3a44;
+        }
+
+        .data-table tr:hover {
+            background: rgba(108, 142, 158, 0.05);
+        }
+
+        body.dark .data-table tr:hover {
+            background: rgba(141, 170, 186, 0.05);
+        }
+
+        .badge-datatype {
+            background: rgba(108, 142, 158, 0.15);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        body.dark .badge-datatype {
+            background: rgba(141, 170, 186, 0.2);
+        }
+
+        .missing-value {
+            color: #d97777;
+            font-weight: 500;
+        }
+
+        .outlier-badge {
+            background: rgba(217, 119, 119, 0.15);
+            color: #d97777;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .no-outlier-badge {
+            background: rgba(72, 187, 120, 0.15);
+            color: #48bb78;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .outlier-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .outlier-stat {
+            background: rgba(108, 142, 158, 0.08);
+            border-radius: 1rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .outlier-stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #d97777;
+        }
+
+        .outlier-stat-label {
+            font-size: 0.8rem;
+            color: #5a6e7c;
+            margin-top: 0.25rem;
+        }
+
+        body.dark .outlier-stat-label {
+            color: #a9bed3;
+        }
+
+        .section-card:nth-child(1) { animation-delay: 0.1s; }
+        .section-card:nth-child(2) { animation-delay: 0.2s; }
+        .section-card:nth-child(3) { animation-delay: 0.3s; }
+        .section-card:nth-child(4) { animation-delay: 0.4s; }
+        .section-card:nth-child(5) { animation-delay: 0.5s; }
+        .section-card:nth-child(6) { animation-delay: 0.6s; }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+
+            .title-section h1 {
+                font-size: 1.5rem;
+            }
+
+            .stat-value {
+                font-size: 1.8rem;
+            }
+
+            .health-score-value {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+            }
+
+            .data-table {
+                font-size: 0.8rem;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 0.6rem 0.5rem;
+            }
+
+            .health-sub-scores {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .btn-download-pdf {
+                padding: 12px 28px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Generating your professional PDF report...</p>
+    </div>
+
+    <div class="theme-toggle" id="themeToggle">
+        <i class="fas fa-moon"></i>
+        <span>Dark Mode</span>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="title-section">
+                <h1><i class="fas fa-chart-line"></i> Dataset Analytics Report</h1>
+                <p>Comprehensive insights from your CSV data</p>
+            </div>
+            <a href="/" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                Upload New Dataset
+            </a>
+        </div>
+
+        <!-- Premium Download PDF Button - Backend Implementation -->
+        <div class="pdf-btn-container">
+            <button class="btn-download-pdf" id="downloadPdfBtn">
+                <i class="fas fa-file-pdf"></i>
+                Download PDF Report
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+
+        <!-- Dataset Overview Section -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ report["Dataset Summary"]["Total Rows"] }}</div>
+                <div class="stat-label">Total Rows</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ report["Dataset Summary"]["Total Columns"] }}</div>
+                <div class="stat-label">Total Columns</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ report["Dataset Summary"]["Duplicate Rows"] }}</div>
+                <div class="stat-label">Duplicate Rows</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ report["Dataset Summary"]["Memory Usage"] }}</div>
+                <div class="stat-label">Memory Usage</div>
+            </div>
+            
+            <!-- Health Score Card -->
+            <div class="health-score-card">
+                <div class="health-score-value">
+                    {% if report["Health Score"].overall_score and report["Health Score"].overall_score > 0 %}
+                        {{ report["Health Score"].overall_score }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </div>
+                <div class="health-score-label">Dataset Health Score</div>
+                <div class="health-sub-scores">
+                    <div class="sub-score">
+                        <div class="sub-score-value">
+                            {% if report["Health Score"].completeness and report["Health Score"].completeness > 0 %}
+                                {{ report["Health Score"].completeness }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="sub-score-label">Completeness</div>
+                    </div>
+                    <div class="sub-score">
+                        <div class="sub-score-value">
+                            {% if report["Health Score"].quality_score and report["Health Score"].quality_score > 0 %}
+                                {{ report["Health Score"].quality_score }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="sub-score-label">Data Quality</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Missing Values Table -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Missing Values Analysis
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Column Name</th>
+                            <th>Missing Count</th>
+                            <th>Missing Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col, miss in report["Missing Values"].items() %}
+                        <tr>
+                            <td><strong>{{ col }}</strong></td>
+                            <td {% if miss.count > 0 %}class="missing-value"{% endif %}>{{ miss.count }}</td>
+                            <td {% if miss.percent > 0 %}class="missing-value"{% endif %}>{{ miss.percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Data Types Table -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="fas fa-database"></i>
+                Column Data Types
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Column Name</th><th>Data Type</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for col, dtype in report["Data Types"].items() %}
+                        <tr>
+                            <td><strong>{{ col }}</strong></td>
+                            <td><span class="badge-datatype">{{ dtype }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Column Analysis Table -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="fas fa-chart-simple"></i>
+                Detailed Column Analysis
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Column Name</th>
+                            <th>Datatype</th>
+                            <th>Missing Values</th>
+                            <th>Unique Values</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col, detail in report["Column Analysis"].items() %}
+                        <tr>
+                            <td><strong>{{ col }}</strong></td>
+                            <td><span class="badge-datatype">{{ detail.datatype }}</span></td>
+                            <td {% if detail.missing > 0 %}class="missing-value"{% endif %}>{{ detail.missing }}</td>
+                            <td>{{ detail.unique }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Outlier Analysis Section -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Outlier Analysis
+            </div>
+            
+            {% if report["Outliers"] and report["Outliers"].get('outliers_detail') and report["Outliers"].outliers_detail|length > 0 %}
+                <!-- Outlier Summary Stats -->
+                <div class="outlier-summary">
+                    <div class="outlier-stat">
+                        <div class="outlier-stat-value">{{ report["Outliers"].get('total_outliers', 0) }}</div>
+                        <div class="outlier-stat-label">Total Outliers Detected</div>
+                    </div>
+                    <div class="outlier-stat">
+                        <div class="outlier-stat-value">{{ report["Outliers"].get('columns_with_outliers', [])|length }}</div>
+                        <div class="outlier-stat-label">Columns with Outliers</div>
+                    </div>
+                    <div class="outlier-stat">
+                        <div class="outlier-stat-value">{{ report["Outliers"].get('outlier_percentage', 0) }}%</div>
+                        <div class="outlier-stat-label">Outlier Percentage</div>
+                    </div>
+                </div>
+
+                <!-- Outlier Details Table -->
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Column Name</th>
+                                <th>Outlier Count</th>
+                                <th>Outlier Percentage</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col, details in report["Outliers"].outliers_detail.items() %}
+                            <tr>
+                                <td><strong>{{ col }}</strong></td>
+                                <td class="missing-value">{{ details.outlier_count }}</td>
+                                <td class="missing-value">{{ details.outlier_percentage }}%</td>
+                                <td>
+                                    {% if details.outlier_count > 0 %}
+                                        <span class="outlier-badge">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            {{ details.outlier_count }} outlier{% if details.outlier_count != 1 %}s{% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="no-outlier-badge">
+                                            <i class="fas fa-check-circle"></i> No outliers
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 2rem; color: #5a6e7c;">
+                    <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; color: #48bb78;"></i>
+                    <p>No numeric columns with outliers detected in this dataset</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">All values are within expected ranges</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Numeric Statistics Table -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="fas fa-calculator"></i>
+                Numeric Columns Statistics
+            </div>
+            {% if report["Numeric Statistics"]|length > 0 %}
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Column Name</th>
+                            <th>Mean</th>
+                            <th>Median</th>
+                            <th>Minimum</th>
+                            <th>Maximum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col, stats in report["Numeric Statistics"].items() %}
+                        <tr>
+                            <td><strong>{{ col }}</strong></td>
+                            <td>{{ stats.mean }}</td>
+                            <td>{{ stats.median }}</td>
+                            <td>{{ stats.min }}</td>
+                            <td>{{ stats.max }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 2rem; color: #5a6e7c;">
+                <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                No numeric columns available for statistical analysis
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const downloadBtn = document.getElementById('downloadPdfBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
+        function initTheme() {
+            const savedTheme = localStorage.getItem('datasetTheme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.body.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = themeToggle.querySelector('i');
+            const text = themeToggle.querySelector('span');
+            if (isDark) {
+                icon.className = 'fas fa-sun';
+                text.textContent = 'Light Mode';
+            } else {
+                icon.className = 'fas fa-moon';
+                text.textContent = 'Dark Mode';
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('datasetTheme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        });
+
+        // PDF Download - Backend Implementation (No JSON data transfer)
+        downloadBtn.addEventListener('click', async () => {
+            loadingOverlay.classList.add('active');
+            
+            try {
+                // Simple POST request - no JSON payload
+                const response = await fetch('/download-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    // Empty body since backend retrieves from config
+                    body: ''
+                });
+                
+                if (response.ok) {
+                    // Get the PDF blob and download it
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    
+                    // Extract filename from Content-Disposition header or use default
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'dataset_analytics_report.pdf';
+                    if (contentDisposition && contentDisposition.includes('filename=')) {
+                        filename = contentDisposition.split('filename=')[1].replace(/["']/g, '');
+                    }
+                    
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const errorText = await response.text();
+                    console.error('PDF generation failed:', errorText);
+                    alert('Failed to generate PDF report. Please try again.');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('An error occurred while generating the PDF. Please try again.');
+            } finally {
+                loadingOverlay.classList.remove('active');
+            }
+        });
+
+        initTheme();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Dataset Report Generator | Upload CSV</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #eef2f7 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        body.dark {
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 3rem;
+            padding: 0.7rem 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            z-index: 100;
+            border: 1px solid rgba(108, 142, 158, 0.2);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body.dark .theme-toggle {
+            background: rgba(30, 35, 48, 0.95);
+            color: #eef2f8;
+            border-color: rgba(141, 170, 186, 0.3);
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .upload-container {
+            max-width: 650px;
+            width: 100%;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2c3e50 0%, #6c8e9e 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.75rem;
+        }
+
+        body.dark .header h1 {
+            background: linear-gradient(135deg, #eef2f8 0%, #8daaba 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #5a6e7c;
+            font-weight: 400;
+        }
+
+        body.dark .subtitle {
+            color: #a9bed3;
+        }
+
+        .upload-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(108, 142, 158, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        body.dark .upload-card {
+            background: rgba(31, 42, 52, 0.85);
+            backdrop-filter: blur(12px);
+            border-color: rgba(141, 170, 186, 0.2);
+        }
+
+        .upload-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 28px 48px rgba(0, 0, 0, 0.12);
+        }
+
+        .dropzone {
+            border: 2px dashed #cbdbe6;
+            border-radius: 1.5rem;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(248, 250, 252, 0.6);
+        }
+
+        body.dark .dropzone {
+            background: rgba(20, 28, 36, 0.6);
+            border-color: #354e5e;
+        }
+
+        .dropzone i {
+            font-size: 3.5rem;
+            color: #6c8e9e;
+            margin-bottom: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        body.dark .dropzone i {
+            color: #8daaba;
+        }
+
+        .dropzone:hover i {
+            transform: translateY(-5px);
+        }
+
+        .dropzone p {
+            color: #4a627a;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        body.dark .dropzone p {
+            color: #b8ccdf;
+        }
+
+        .dropzone.drag-over {
+            border-color: #6c8e9e;
+            background: rgba(108, 142, 158, 0.1);
+            transform: scale(0.98);
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #6c8e9e;
+            font-weight: 500;
+        }
+
+        body.dark .file-info {
+            color: #8daaba;
+        }
+
+        .size-limit {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #8ba0ae;
+        }
+
+        body.dark .size-limit {
+            color: #6b8aa0;
+        }
+
+        .btn-upload {
+            margin-top: 2rem;
+            background: linear-gradient(135deg, #6c8e9e 0%, #5a7a8a 100%);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(108, 142, 158, 0.3);
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(108, 142, 158, 0.4);
+            background: linear-gradient(135deg, #5a7a8a 0%, #4a6a7a 100%);
+        }
+
+        .btn-upload:active {
+            transform: translateY(0);
+        }
+
+        .btn-upload:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 4px solid rgba(108, 142, 158, 0.2);
+            border-top-color: #6c8e9e;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-overlay p {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 640px) {
+            .upload-container {
+                padding: 0;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 0.95rem;
+            }
+
+            .upload-card {
+                padding: 1.5rem;
+            }
+
+            .dropzone {
+                padding: 2rem 1rem;
+            }
+
+            .theme-toggle {
+                top: 1rem;
+                right: 1rem;
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" id="themeToggle">
+        <i class="fas fa-moon"></i>
+        <span>Dark Mode</span>
+    </div>
+
+    <div class="upload-container">
+        <div class="header">
+            <h1>📊 Dataset Report Generator</h1>
+            <p class="subtitle">Transform your CSV data into comprehensive analytics insights</p>
+        </div>
+
+        <div class="upload-card">
+            <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                <div class="dropzone" id="dropzone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your CSV file here</p>
+                    <p style="font-size: 0.85rem; margin-top: 5px;">or click to browse</p>
+                    <div class="file-info" id="fileInfo">
+                        <i class="fas fa-file-csv"></i> No file selected
+                    </div>
+                    <div class="size-limit">
+                        <i class="fas fa-info-circle"></i> Maximum file size: 50MB
+                    </div>
+                    <input type="file" name="file" id="fileInput" accept=".csv" style="display: none;" required>
+                </div>
+                <button type="submit" class="btn-upload" id="submitBtn">
+                    <i class="fas fa-chart-line"></i>
+                    Generate Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Analyzing your dataset...</p>
+        <p style="font-size: 0.9rem; opacity: 0.8;">This may take a few seconds</p>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // File size limit (50MB)
+        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('datasetTheme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.body.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = themeToggle.querySelector('i');
+            const text = themeToggle.querySelector('span');
+            if (isDark) {
+                icon.className = 'fas fa-sun';
+                text.textContent = 'Light Mode';
+            } else {
+                icon.className = 'fas fa-moon';
+                text.textContent = 'Dark Mode';
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('datasetTheme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        });
+
+        let selectedFile = null;
+
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                
+                // Check file size
+                if (file.size > MAX_FILE_SIZE) {
+                    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                    fileInfo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large! ${sizeInMB}MB (Max 50MB)`;
+                    fileInfo.style.color = '#d97777';
+                    selectedFile = null;
+                    fileInput.value = ''; // Clear the file input
+                    return;
+                }
+                
+                // Check file extension
+                if (!file.name.endsWith('.csv')) {
+                    fileInfo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please upload a valid CSV file';
+                    fileInfo.style.color = '#d97777';
+                    selectedFile = null;
+                    fileInput.value = '';
+                    return;
+                }
+                
+                selectedFile = file;
+                updateFileInfo(selectedFile);
+            } else {
+                selectedFile = null;
+                fileInfo.innerHTML = '<i class="fas fa-file-csv"></i> No file selected';
+                fileInfo.style.color = '#6c8e9e';
+            }
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('drag-over');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('drag-over');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                
+                // Check file size
+                if (file.size > MAX_FILE_SIZE) {
+                    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                    fileInfo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large! ${sizeInMB}MB (Max 50MB)`;
+                    fileInfo.style.color = '#d97777';
+                    selectedFile = null;
+                    return;
+                }
+                
+                // Check file extension
+                if (!file.name.endsWith('.csv')) {
+                    fileInfo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please upload a valid CSV file';
+                    fileInfo.style.color = '#d97777';
+                    selectedFile = null;
+                    return;
+                }
+                
+                selectedFile = file;
+                fileInput.files = files;
+                updateFileInfo(selectedFile);
+            }
+        });
+
+        function updateFileInfo(file) {
+            const sizeKB = (file.size / 1024).toFixed(1);
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            let sizeText = '';
+            
+            if (file.size > 1024 * 1024) {
+                sizeText = `${sizeMB} MB`;
+            } else {
+                sizeText = `${sizeKB} KB`;
+            }
+            
+            fileInfo.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name} (${sizeText})`;
+            fileInfo.style.color = '#48bb78';
+        }
+
+        uploadForm.addEventListener('submit', (e) => {
+            if (!selectedFile) {
+                e.preventDefault();
+                fileInfo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please select a CSV file first';
+                fileInfo.style.color = '#d97777';
+                return;
+            }
+            loadingOverlay.style.display = 'flex';
+        });
+
+        initTheme();
+    </script>
+</body>
+</html> 
