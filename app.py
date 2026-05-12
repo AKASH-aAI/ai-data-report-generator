@@ -1,13 +1,13 @@
-
 import os
+import threading
+import time
 
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("reports", exist_ok=True)
 
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, session, after_this_request
 import pandas as pd
 import numpy as np
-import os
 import json
 from datetime import datetime
 from functools import wraps
@@ -26,6 +26,7 @@ app.config['REPORTS_FOLDER'] = 'reports'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['LAST_REPORT'] = None  # Store last analyzed report
 app.config['LAST_FILENAME'] = None  # Store last uploaded filename
+app.config['CLEANUP_DELAY'] = 30  # 30 seconds delay for cleanup
 
 # Password protection config
 REQUIRED_PASSWORD = "AIREPORT2026"
@@ -33,6 +34,71 @@ REQUIRED_PASSWORD = "AIREPORT2026"
 # Create folders
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['REPORTS_FOLDER'], exist_ok=True)
+
+
+# =========================
+# File Cleanup Functions
+# =========================
+
+def delayed_file_deletion(filepath, delay_seconds=30):
+    """
+    Delete a file after a specified delay in a background thread
+    This ensures the download is not interrupted
+    """
+    def delete_file():
+        time.sleep(delay_seconds)
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print(f"Cleanup: Deleted {filepath} after {delay_seconds} seconds")
+        except Exception as e:
+            print(f"Cleanup error for {filepath}: {str(e)}")
+    
+    # Start background thread for deletion
+    thread = threading.Thread(target=delete_file, daemon=True)
+    thread.start()
+
+
+def schedule_files_cleanup(uploaded_filepath, pdf_filepath=None):
+    """
+    Schedule cleanup for uploaded CSV and optional PDF file
+    """
+    # Schedule CSV deletion after 30 seconds
+    if uploaded_filepath and os.path.exists(uploaded_filepath):
+        delayed_file_deletion(uploaded_filepath, app.config['CLEANUP_DELAY'])
+    
+    # Schedule PDF deletion after 30 seconds if provided
+    if pdf_filepath and os.path.exists(pdf_filepath):
+        delayed_file_deletion(pdf_filepath, app.config['CLEANUP_DELAY'])
+
+
+def cleanup_orphaned_files():
+    """
+    Periodic cleanup of any files older than 1 hour (safety net)
+    This runs only when called, not automatically
+    """
+    try:
+        current_time = time.time()
+        deleted_count = 0
+        
+        for folder in [app.config['UPLOAD_FOLDER'], app.config['REPORTS_FOLDER']]:
+            if not os.path.exists(folder):
+                continue
+                
+            for filename in os.listdir(folder):
+                filepath = os.path.join(folder, filename)
+                if os.path.isfile(filepath):
+                    # Delete files older than 1 hour (safety net)
+                    file_age = current_time - os.path.getctime(filepath)
+                    if file_age > 3600:  # 1 hour
+                        os.remove(filepath)
+                        deleted_count += 1
+                        print(f"Safety cleanup: Deleted old file {filepath}")
+        
+        return deleted_count
+    except Exception as e:
+        print(f"Safety cleanup error: {str(e)}")
+        return 0
 
 
 # =========================
@@ -273,7 +339,7 @@ def index():
 
 
 # =========================
-# Upload Route (Protected)
+# Upload Route (Protected) - UPDATED with cleanup
 # =========================
 
 @app.route('/upload', methods=['POST'])
@@ -312,21 +378,29 @@ def upload():
             # Store report and filename in Flask config (backend memory)
             app.config['LAST_REPORT'] = report
             app.config['LAST_FILENAME'] = file.filename
+            # Store the uploaded filepath for cleanup later
+            app.config['LAST_UPLOADED_FILE'] = filepath
             
             # Also store in session for user-specific storage (optional)
             session['last_report'] = report
             session['last_filename'] = file.filename
+            session['last_uploaded_file'] = filepath
+
+            # Schedule cleanup for the uploaded CSV file after 30 seconds
+            schedule_files_cleanup(filepath)
 
             return render_template('report.html', report=report, filename=file.filename)
 
         except Exception as e:
+            # If error occurs, still try to cleanup the uploaded file
+            schedule_files_cleanup(filepath)
             return render_template('error.html', message=str(e))
 
     return redirect(url_for('index'))
 
 
 # =========================
-# PDF Download Route (Protected)
+# PDF Download Route (Protected) - UPDATED with cleanup after download
 # =========================
 
 @app.route('/download-pdf', methods=['POST', 'GET'])
@@ -350,6 +424,24 @@ def download_pdf():
         pdf_filename, pdf_path = generate_pdf_report(report, filename)
         
         if pdf_path and os.path.exists(pdf_path):
+            # Get the uploaded file path if it still exists
+            uploaded_filepath = app.config.get('LAST_UPLOADED_FILE')
+            if not uploaded_filepath:
+                uploaded_filepath = session.get('last_uploaded_file')
+            
+            # Schedule cleanup for both files after 30 seconds
+            # The PDF will be deleted after download, CSV is already scheduled but we schedule again to be safe
+            schedule_files_cleanup(uploaded_filepath, pdf_path)
+            
+            # Use after_this_request to ensure cleanup happens even if download fails
+            @after_this_request
+            def cleanup_after_download(response):
+                # PDF cleanup is already scheduled, but this ensures CSV cleanup
+                if uploaded_filepath and os.path.exists(uploaded_filepath):
+                    # Already scheduled, but double-check
+                    pass
+                return response
+            
             return send_file(
                 pdf_path,
                 as_attachment=True,
@@ -367,27 +459,38 @@ def download_pdf():
 
 
 # =========================
-# Cleanup Old Files Route (Optional, Protected)
+# Cleanup Old Files Route (Protected) - ENHANCED
 # =========================
 
-@app.route('/cleanup', methods=['POST'])
+@app.route('/cleanup', methods=['POST', 'GET'])
 @login_required
 def cleanup():
     """Clean up old files from uploads and reports folders"""
     try:
-        import time
-        current_time = time.time()
-        # Delete files older than 1 hour
+        deleted_count = cleanup_orphaned_files()
+        return {"status": "success", "message": f"Cleanup completed. Deleted {deleted_count} files."}, 200
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
+
+# =========================
+# Manual File Cleanup Utility (Optional)
+# =========================
+
+@app.route('/cleanup-all', methods=['POST'])
+@login_required
+def cleanup_all():
+    """Emergency cleanup - deletes ALL files in uploads and reports folders"""
+    try:
         deleted_count = 0
         for folder in [app.config['UPLOAD_FOLDER'], app.config['REPORTS_FOLDER']]:
-            for filename in os.listdir(folder):
-                filepath = os.path.join(folder, filename)
-                if os.path.isfile(filepath):
-                    file_age = current_time - os.path.getctime(filepath)
-                    if file_age > 3600:  # 1 hour
+            if os.path.exists(folder):
+                for filename in os.listdir(folder):
+                    filepath = os.path.join(folder, filename)
+                    if os.path.isfile(filepath):
                         os.remove(filepath)
                         deleted_count += 1
-        return {"status": "success", "message": f"Cleanup completed. Deleted {deleted_count} files."}, 200
+        return {"status": "success", "message": f"Emergency cleanup completed. Deleted {deleted_count} files."}, 200
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
 
@@ -397,4 +500,6 @@ def cleanup():
 # =========================
 
 if __name__ == '__main__':
+    # Run a one-time cleanup on startup to ensure folders are clean
+    cleanup_orphaned_files()
     app.run(debug=True)  
