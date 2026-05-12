@@ -23,7 +23,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-pr
 # Config
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['REPORTS_FOLDER'] = 'reports'
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit
 app.config['LAST_REPORT'] = None  # Store last analyzed report
 app.config['LAST_FILENAME'] = None  # Store last uploaded filename
 app.config['CLEANUP_DELAY'] = 30  # 30 seconds delay for cleanup
@@ -292,7 +292,7 @@ def analyze_dataset(df):
 
 @app.errorhandler(413)
 def too_large(e):
-    return render_template('error.html', message="File too large! Maximum file size is 50MB"), 413
+    return render_template('error.html', message="File too large! Maximum file size is 10MB"), 413
 
 
 # =========================
@@ -339,7 +339,7 @@ def index():
 
 
 # =========================
-# Upload Route (Protected) - UPDATED with cleanup
+# Upload Route (Protected) - UPDATED with cleanup and 10MB limit
 # =========================
 
 @app.route('/upload', methods=['POST'])
@@ -359,10 +359,10 @@ def upload():
         file_size = file.tell()
         file.seek(0)
 
-        max_size = 50 * 1024 * 1024
+        max_size = 10 * 1024 * 1024  # 10MB
 
         if file_size > max_size:
-            return render_template('error.html', message="File size exceeds 50MB")
+            return render_template('error.html', message="File size exceeds 10MB")
 
         # Generate unique filename to prevent conflicts
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -502,4 +502,4 @@ def cleanup_all():
 if __name__ == '__main__':
     # Run a one-time cleanup on startup to ensure folders are clean
     cleanup_orphaned_files()
-    app.run(debug=True)  
+    app.run(debug=True) 

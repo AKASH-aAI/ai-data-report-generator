@@ -321,7 +321,7 @@
                         <i class="fas fa-file-csv"></i> No file selected
                     </div>
                     <div class="size-limit">
-                        <i class="fas fa-info-circle"></i> Maximum file size: 50MB
+                        <i class="fas fa-info-circle"></i> Maximum file size: 10MB
                     </div>
                     <input type="file" name="file" id="fileInput" accept=".csv" style="display: none;" required>
                 </div>
@@ -348,8 +348,8 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const themeToggle = document.getElementById('themeToggle');
 
-        // File size limit (50MB)
-        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+        // File size limit (10MB)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
         function initTheme() {
             const savedTheme = localStorage.getItem('datasetTheme');
@@ -393,7 +393,7 @@
                 // Check file size
                 if (file.size > MAX_FILE_SIZE) {
                     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-                    fileInfo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large! ${sizeInMB}MB (Max 50MB)`;
+                    fileInfo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large! ${sizeInMB}MB (Max 10MB)`;
                     fileInfo.style.color = '#d97777';
                     selectedFile = null;
                     fileInput.value = ''; // Clear the file input
@@ -437,7 +437,7 @@
                 // Check file size
                 if (file.size > MAX_FILE_SIZE) {
                     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-                    fileInfo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large! ${sizeInMB}MB (Max 50MB)`;
+                    fileInfo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large! ${sizeInMB}MB (Max 10MB)`;
                     fileInfo.style.color = '#d97777';
                     selectedFile = null;
                     return;
@@ -485,4 +485,4 @@
         initTheme();
     </script>
 </body>
-</html> 
+</html>  
