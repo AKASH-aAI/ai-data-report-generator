@@ -6,6 +6,8 @@ An AI-powered automated dataset analytics platform that transforms raw CSV files
 
 https://ai-data-report-generator.onrender.com
 
+PASSWORD : AIREPORT2026
+
 ---
 
 # 📌 Problem It Solves
